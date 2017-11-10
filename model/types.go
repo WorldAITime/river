@@ -18,10 +18,18 @@ type Metadata struct {
 	Namespace string `json:"namespace"`
 }
 
+type Condition struct {
+	Type    string `json:"type"`
+	Status  string `json:"status"`
+	Reason  string `json:"reason"`
+	Message string `json:"message"`
+}
+
 type Status struct {
-	Replicas          int32 `json:"replicas"`
-	ReadyReplicas     int32 `json:"readyReplicas"`
-	AvailableReplicas int32 `json:"availableReplicas"`
+	Replicas          int32       `json:"replicas"`
+	ReadyReplicas     int32       `json:"readyReplicas"`
+	AvailableReplicas int32       `json:"availableReplicas"`
+	Conditions        []Condition `json:"conditions"`
 }
 
 type MiniDeployment struct {
