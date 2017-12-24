@@ -108,6 +108,7 @@ func (wc *WebConsoleController) ReadFromPod(ws *websocket.Conn, wsToPod *websock
 		case <-ch:
 			return nil
 		default:
+			wsToPod.SetReadDeadline(time.Now().Add(10 * time.Second))
 			_, msg, err := wsToPod.ReadMessage()
 			if err != nil {
 				if e, ok := err.(net.Error); ok && e.Timeout() {
