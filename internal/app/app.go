@@ -8,6 +8,8 @@ import (
 	batchv1 "k8s.io/client-go/pkg/apis/batch/v1"
 	v1beta1 "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
+	"github.com/Masterminds/glide/action"
+	"github.com/yarntime/hybridjob/pkg/tools"
 	"github.com/yarntime/hybridjob/pkg/types"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -209,12 +211,14 @@ func (a *AppController) BuildResult(namespace string, listOptions meta_v1.ListOp
 	jobAppChan := make(chan []App)
 	daemonSetAppChan := make(chan []App)
 	statefulSetAppChan := make(chan []App)
+	hybridJobAppChan := make(chan []App)
 
-	a.GenerateRCApps(namespace, listOptions, nameToService, rcAppChan)
-	a.GenerateDeploymentApps(namespace, listOptions, nameToService, depAppChan)
-	a.GenerateJobApps(namespace, listOptions, nameToService, jobAppChan)
-	a.GenerateDaemonSetApps(namespace, listOptions, nameToService, daemonSetAppChan)
-	a.GenerateStatefulSetApps(namespace, listOptions, nameToService, statefulSetAppChan)
+	go a.GenerateRCApps(namespace, listOptions, nameToService, rcAppChan)
+	go a.GenerateDeploymentApps(namespace, listOptions, nameToService, depAppChan)
+	go a.GenerateJobApps(namespace, listOptions, nameToService, jobAppChan)
+	go a.GenerateDaemonSetApps(namespace, listOptions, nameToService, daemonSetAppChan)
+	go a.GenerateStatefulSetApps(namespace, listOptions, nameToService, statefulSetAppChan)
+	go a.GenerateHybridJobApps(namespace, listOptions, nameToService, hybridJobAppChan)
 
 	apps = <-rcAppChan
 	resources.Apps = append(resources.Apps, apps...)
@@ -225,6 +229,8 @@ func (a *AppController) BuildResult(namespace string, listOptions meta_v1.ListOp
 	apps = <-daemonSetAppChan
 	resources.Apps = append(resources.Apps, apps...)
 	apps = <-statefulSetAppChan
+	resources.Apps = append(resources.Apps, apps...)
+	apps = <-hybridJobAppChan
 	resources.Apps = append(resources.Apps, apps...)
 
 	return resources
@@ -386,6 +392,7 @@ func (a *AppController) GenerateStatefulSetApps(namespace string, listOptions me
 
 		apps = append(apps, app)
 	}
+	appChan <- apps
 }
 
 func convertStatefulSetToApp(statefulSet app.StatefulSet) App {
@@ -418,16 +425,18 @@ func (a *AppController) GenerateHybridJobApps(namespace string, listOptions meta
 
 		apps = append(apps, app)
 	}
+	appChan <- apps
 }
 
 func convertHybridJobToApp(hybridJob types.HybridJob) App {
 	app := App{
 		Metadata: Metadata{
-			Name:        hybridJob.Name,
-			Namespace:   hybridJob.Namespace,
-			Type:        model.HybridJob,
-			Labels:      hybridJob.Labels,
-			Annotations: hybridJob.Annotations,
+			Name:            hybridJob.Name,
+			Namespace:       hybridJob.Namespace,
+			Type:            model.HybridJob,
+			Labels:          hybridJob.Labels,
+			Annotations:     hybridJob.Annotations,
+			DesiredReplicas: tools.NewInt32(0),
 		},
 		Completed: hybridJob.Status.Phase == types.Finished,
 	}

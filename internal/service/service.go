@@ -63,6 +63,13 @@ func (s *ServiceController) ServeRequest(ws *model.Websocket, subType string, na
 			return err
 		}
 		return s.handleWatch(ws, original, model.PersistentVolumeClaim, namespace, name)
+	case model.HybridJob:
+		original, err := s.client.GetHybridJob(namespace, name)
+		if err != nil {
+			glog.Errorf("Failed to get original hybrid job(%s/%s).", namespace, name)
+			return err
+		}
+		return s.handleWatch(ws, original, model.HybridJob, namespace, name)
 	}
 	return nil
 }
@@ -110,7 +117,7 @@ func (s *ServiceController) handleWatch(ws *model.Websocket, original interface{
 		case <-ticker.C:
 			err := ws.Conn.WriteJSON(model.GetResponse(original))
 			if err != nil {
-				glog.Error("Failed to send msg to clinet.")
+				glog.Error("Failed to send msg to client.")
 				return err
 			}
 
